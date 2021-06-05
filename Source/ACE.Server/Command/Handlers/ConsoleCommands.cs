@@ -5,7 +5,6 @@ using ACE.DatLoader.FileTypes;
 using ACE.Entity.Enum;
 using ACE.Server.Network;
 using ACE.PcapReader;
-using Lifestoned.DataModel.Content;
 
 namespace ACE.Server.Command.Handlers
 {
@@ -158,6 +157,45 @@ namespace ACE.Server.Command.Handlers
             {
                 Console.WriteLine("Sorry, there are no login or teleport events in this pcap.");
             }
+        }
+
+        [CommandHandler("teleport-list", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0,
+    "Lists the teleport locations and timestamps in the currently selected pcap.", "")]
+        public static void HandleTeleportList(Session session, params string[] parameters)
+        {
+            if (PCapReader.PcapMarkers.Count > 0)
+            {
+                var teleportIndex = 0;
+                foreach (var pcapMarker in PCapReader.PcapMarkers)
+                {
+                    if (pcapMarker.Type == MarkerType.Login)
+                    {
+                        Console.WriteLine($"Player Login {pcapMarker.LoginInstance}: line {pcapMarker.LineNumber}");
+                        teleportIndex = 0;
+                    }
+                    else if (pcapMarker.Type == MarkerType.Teleport)
+                    {
+                        Console.WriteLine(
+                            $"  Teleport {teleportIndex + 1}: line {pcapMarker.LineNumber}");
+                        teleportIndex++;
+                    }
+                }
+
+                Console.WriteLine($"End of pcap: line {PCapReader.EndRecordIndex - 1}");
+            }
+            else
+            {
+                Console.WriteLine("Sorry, there are no login or teleport events in this pcap.");
+            }
+        }
+
+        [CommandHandler("pause", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0, "Pause or unpause Pcap playback", "")]
+        public static void HandlePause(Session session, params string[] parameters)
+        {
+            if (!session.PcapPaused)
+                session.PausePcapPlayback();
+            else
+                session.RestartPcapPlayback();
         }
     }
 }

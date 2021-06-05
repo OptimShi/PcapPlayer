@@ -5,5 +5,17 @@ namespace ACE.Common
         public GameConfiguration Server { get; set; }
 
         public DatabaseConfiguration MySql { get; set; }
+
+        public MasterConfiguration()
+        {
+        }
+
+        public MasterConfiguration(string host, uint port)
+        {
+            Server = new GameConfiguration();
+            Server.Network = new NetworkSettings();
+            Server.Network.Host = host;
+            Server.Network.Port = port;
+        }
     }
 }

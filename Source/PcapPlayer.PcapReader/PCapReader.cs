@@ -198,6 +198,7 @@ namespace ACE.PcapReader
             }
         }
 
+
         public static void LoadPcap(string fileName, bool asMessages, ref bool abort)
         {
             using (FileStream fileStream =
@@ -256,7 +257,6 @@ namespace ACE.PcapReader
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Caught Exception: " + e.Message);
                     return false;
                 }
             }
