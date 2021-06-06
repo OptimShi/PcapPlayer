@@ -5,6 +5,8 @@ using ACE.DatLoader.FileTypes;
 using ACE.Entity.Enum;
 using ACE.Server.Network;
 using ACE.PcapReader;
+using ACE.Entity;
+using PcapPlayer.Entity;
 
 namespace ACE.Server.Command.Handlers
 {
@@ -159,34 +161,72 @@ namespace ACE.Server.Command.Handlers
             }
         }
 
-        [CommandHandler("teleport-list", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0,
+        [CommandHandler("list", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0,
     "Lists the teleport locations and timestamps in the currently selected pcap.", "")]
         public static void HandleTeleportList(Session session, params string[] parameters)
         {
             if (PCapReader.PcapMarkers.Count > 0)
             {
+                DungeonList dungeons = new DungeonList();
                 var teleportIndex = 0;
-                foreach (var pcapMarker in PCapReader.PcapMarkers)
+                for(var i = 0; i < PCapReader.PcapMarkers.Count; i++)
                 {
-                    if (pcapMarker.Type == MarkerType.Login)
+                    var pcapMarker = PCapReader.PcapMarkers[i];
+                    var line = pcapMarker.LineNumber;
+                    CM_Movement.Position? pos;
+                    if ((i + 1) < PCapReader.PcapMarkers.Count)
                     {
-                        Console.WriteLine($"Player Login {pcapMarker.LoginInstance}: line {pcapMarker.LineNumber}");
-                        teleportIndex = 0;
+                        pos = PCapReader.GetDetailedLocationInfo(line, PCapReader.PcapMarkers[i + 1].LineNumber);
                     }
-                    else if (pcapMarker.Type == MarkerType.Teleport)
+                    else
                     {
-                        Console.WriteLine(
-                            $"  Teleport {teleportIndex + 1}: line {pcapMarker.LineNumber}");
-                        teleportIndex++;
+                        pos = PCapReader.GetDetailedLocationInfo(line, PCapReader.EndRecordIndex);
+                    }
+
+                    string loc = "Unable to determine location.";
+                    if (pos != null)
+                    {
+                        // convert the "Position" to a "Position"
+                        var acePos = new Position(
+                            pos.objcell_id,
+                            new System.Numerics.Vector3(pos.x, pos.y, pos.z),
+                            new System.Numerics.Quaternion(pos.qw, pos.qx, pos.qy, pos.qz)
+                            );
+                        var coords = Entity.PositionExtensions.GetMapCoordStr(acePos);
+                        if (coords != null)
+                        {
+                            loc = coords;
+                        }
+                        else
+                        {
+                            // Are we in a dungeon?
+                            if ((pos.objcell_id & 0xFFFF) >= 0x100)
+                            {
+                                string dungeonName = dungeons.GetDungeonName(pos.objcell_id >> 16);
+                                if (dungeonName != "")
+                                    loc = dungeonName;
+                            }
+                        }
+                    }
+
+                    
+                    switch (pcapMarker.Type)
+                    {
+                        case MarkerType.Login:
+                            Console.WriteLine($"Login/Initial Position: {loc}");
+                            break;
+                        case MarkerType.Teleport:
+                            teleportIndex++;
+                            Console.WriteLine($"Teleport {teleportIndex}: {loc}");
+                            break;
                     }
                 }
-
-                Console.WriteLine($"End of pcap: line {PCapReader.EndRecordIndex - 1}");
             }
             else
             {
                 Console.WriteLine("Sorry, there are no login or teleport events in this pcap.");
             }
+            Console.WriteLine();
         }
 
         [CommandHandler("pause", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0, "Pause or unpause Pcap playback", "")]

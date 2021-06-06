@@ -276,6 +276,43 @@ namespace ACE.PcapReader
             return false;
         }
 
+        /// <summary>
+        /// Returns a string containing detailed location info where a packet is located.
+        /// Scans forward to find the next movement event and returns a string containing loc, coordinates (if overground), and dungeon name (if appropriate)
+        /// Note that we don't care WHAT is moving, just any item within the player's "vision" is good enough to get an approximate location.
+        /// </summary>
+        /// <param name="packetID">The packet of our event to start searching from</param>
+        /// <param name="endPpacket">The end packet to search until.</param>
+        /// <returns></returns>
+        public static CM_Movement.Position GetDetailedLocationInfo(int packetID, int endPpacket = -1)
+        {
+            for(var i = packetID; i < endPpacket; i++)
+            {
+                switch(Records[i].opcodes[0]){
+                    case PacketOpcode.Evt_Movement__AutonomousPosition_ID:
+                        using (BinaryReader br = new BinaryReader(new MemoryStream(Records[i].data)))
+                        {
+                            Util.readOpcode(br);
+                            var autoMsg = CM_Movement.AutonomousPosition.read(br);
+                            return autoMsg.position;
+                        }
+                        break;
+                    case PacketOpcode.Evt_Movement__MoveToState_ID:
+                        using (BinaryReader br = new BinaryReader(new MemoryStream(Records[i].data)))
+                        {
+                            Util.readOpcode(br);
+                            var moveMsg = CM_Movement.MoveToState.read(br);
+                            return moveMsg.position;
+                            //var acePos = new ACE.Entity.Position();
+                            
+
+                        }
+                        break;
+                }
+            }
+            return null;
+        }
+
         private class FragNumComparer : IComparer<BlobFrag>
         {
             int IComparer<BlobFrag>.Compare(BlobFrag a, BlobFrag b)
