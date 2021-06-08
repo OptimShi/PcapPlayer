@@ -5,7 +5,8 @@ using ACE.DatLoader.FileTypes;
 using ACE.Entity.Enum;
 using ACE.Server.Network;
 using ACE.PcapReader;
-using Lifestoned.DataModel.Content;
+using ACE.Entity;
+using PcapPlayer.Entity;
 
 namespace ACE.Server.Command.Handlers
 {
@@ -158,6 +159,83 @@ namespace ACE.Server.Command.Handlers
             {
                 Console.WriteLine("Sorry, there are no login or teleport events in this pcap.");
             }
+        }
+
+        [CommandHandler("list", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0,
+    "Lists the teleport locations and timestamps in the currently selected pcap.", "")]
+        public static void HandleTeleportList(Session session, params string[] parameters)
+        {
+            if (PCapReader.PcapMarkers.Count > 0)
+            {
+                DungeonList dungeons = new DungeonList();
+                var teleportIndex = 0;
+                for(var i = 0; i < PCapReader.PcapMarkers.Count; i++)
+                {
+                    var pcapMarker = PCapReader.PcapMarkers[i];
+                    var line = pcapMarker.LineNumber;
+                    CM_Movement.Position? pos;
+                    if ((i + 1) < PCapReader.PcapMarkers.Count)
+                    {
+                        pos = PCapReader.GetDetailedLocationInfo(line, PCapReader.PcapMarkers[i + 1].LineNumber);
+                    }
+                    else
+                    {
+                        pos = PCapReader.GetDetailedLocationInfo(line, PCapReader.EndRecordIndex);
+                    }
+
+                    string loc = "Unable to determine location.";
+                    if (pos != null)
+                    {
+                        // convert the "Position" to a "Position"
+                        var acePos = new Position(
+                            pos.objcell_id,
+                            new System.Numerics.Vector3(pos.x, pos.y, pos.z),
+                            new System.Numerics.Quaternion(pos.qw, pos.qx, pos.qy, pos.qz)
+                            );
+                        var coords = Entity.PositionExtensions.GetMapCoordStr(acePos);
+                        if (coords != null)
+                        {
+                            loc = coords;
+                        }
+                        else
+                        {
+                            // Are we in a dungeon?
+                            if ((pos.objcell_id & 0xFFFF) >= 0x100)
+                            {
+                                string dungeonName = dungeons.GetDungeonName(pos.objcell_id >> 16);
+                                if (dungeonName != "")
+                                    loc = dungeonName;
+                            }
+                        }
+                    }
+
+                    
+                    switch (pcapMarker.Type)
+                    {
+                        case MarkerType.Login:
+                            Console.WriteLine($"Login/Initial Position: {loc}");
+                            break;
+                        case MarkerType.Teleport:
+                            teleportIndex++;
+                            Console.WriteLine($"Teleport {teleportIndex}: {loc}");
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("Sorry, there are no login or teleport events in this pcap.");
+            }
+            Console.WriteLine();
+        }
+
+        [CommandHandler("pause", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0, "Pause or unpause Pcap playback", "")]
+        public static void HandlePause(Session session, params string[] parameters)
+        {
+            if (!session.PcapPaused)
+                session.PausePcapPlayback();
+            else
+                session.RestartPcapPlayback();
         }
     }
 }

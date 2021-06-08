@@ -44,10 +44,13 @@ namespace ACE.Common
                 }
                 else
                 {
-                    Console.WriteLine("Configuration file is missing.  Please copy the file Config.js.example to Config.js and edit it to match your needs before running ACE.");
-                    throw new Exception("missing configuration file");
+                    Console.WriteLine("Configuration file is missing.  Will use default settings for host and port. If you wish to change these settings, pleae copy the file Config.js.example to Config.js and edit it to match your needs");
+                    Config = new MasterConfiguration("0.0.0.0", 9000);
                 }
-                Config = JsonConvert.DeserializeObject<MasterConfiguration>(new JsMinifier().Minify(File.ReadAllText(fpChoice)));
+
+                // Config is not null if we've already created it with our default settings due to a missing config file
+                if(Config == null)
+                    Config = JsonConvert.DeserializeObject<MasterConfiguration>(new JsMinifier().Minify(File.ReadAllText(fpChoice)));
             }
             catch (Exception exception)
             {
