@@ -289,6 +289,7 @@ namespace ACE.PcapReader
             for(var i = packetID; i < endPpacket; i++)
             {
                 switch(Records[i].opcodes[0]){
+                    /*
                     case PacketOpcode.Evt_Movement__AutonomousPosition_ID:
                         using (BinaryReader br = new BinaryReader(new MemoryStream(Records[i].data)))
                         {
@@ -297,6 +298,7 @@ namespace ACE.PcapReader
                             return autoMsg.position;
                         }
                         break;
+                    */
                     case PacketOpcode.Evt_Movement__MoveToState_ID:
                         using (BinaryReader br = new BinaryReader(new MemoryStream(Records[i].data)))
                         {
@@ -304,13 +306,34 @@ namespace ACE.PcapReader
                             var moveMsg = CM_Movement.MoveToState.read(br);
                             return moveMsg.position;
                             //var acePos = new ACE.Entity.Position();
-                            
-
                         }
                         break;
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Gets the timestamp of an event, relative to its login instance
+        /// </summary>
+        /// <param name="marker">A PcapMarker of the event in question</param>
+        /// <param name="format">The TimeSpan format of the response</param>
+        /// <returns>A string with a readable time</returns>
+        public static string GetPcapTime(PcapMarker marker, string format = "g")
+        {
+            // Get the time of the relative Login Event
+            var loginEvtRecord = LoginIndexes[marker.LoginInstance-1];
+            var loginTime = GetTimestamp(Records[loginEvtRecord]);
+
+            // Get the time of the packetID
+            var packetTime = GetTimestamp(Records[marker.LineNumber]);
+
+            // Do the math.
+            var diff = packetTime - loginTime;
+
+            // Profit
+            return diff.ToString(@"hh\:mm\:ss");
+            return diff.ToString(format);
         }
 
         private class FragNumComparer : IComparer<BlobFrag>

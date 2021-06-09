@@ -15,11 +15,12 @@
 ## Console Commands
 * `pcap-load <full-path-to-pcap-file>` - Select the PCAP file to load for playback.
 * `pcap-login <login-#>` - Specify a login instance for pcap playback.
-* `markerlist` - List the index and pcap line numbers of detected player teleport and login events. Use with the `pcap-login <login-#>` and `@teleport <index>` command. 
+* `list` - List the index and pcap line numbers of detected player teleport and login events, along with extended information about the event (location, if available, timestamp, etc). Use with the `pcap-login <login-#>` and `@teleport <index>` command. 
 
 ## In-Game Commands
 * `@teleport` - Advance the PCAP to the next teleport instance, if one exists.
-* `@teleport <index-#>` - Advance to the specified player teleport event (zero-based index). Use `markerlist` in the server console to display the list of valid indexes, if any.
+* `@teleport <index-#>` - Advance to the specified player teleport event (zero-based index). Use `list` in the server console to display the list of valid indexes, if any.
+* `@pause` - Pauses the playback of the PCAP. Use `@pause` again to continue playback, or use a `teleport` command
 
 ## Recommended Tools
 * ACLogView [on Github](https://github.com/ACEmulator/aclogview) to view Pcaps.
@@ -29,15 +30,15 @@ The following sections (Code, and Starting the Server) contain all the required 
 
 ### Code 
 1. Install Visual Studio 2017
-   * [Visual Studio minimum required version - VS Community 2017 15.7.0](https://www.visualstudio.com/thank-you-downloading-visual-studio/?sku=Community&rel=15)
-   * [.NET Core 2.2 x64 SDK (Visual Studio 2017) Required](https://www.microsoft.com/net/download/visual-studio-sdks)
+   * [Visual Studio minimum required version - VS Community 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community&rel=16)
+   * [.NET 5.0 x64 SDK (Visual Studio 2019) Required](https://www.microsoft.com/net/download/visual-studio-sdks)
    * If using Visual Studio Community Edition, make sure the following two workloads are installed: .NET Core cross-platform development and .NET Desktop Development
-3. Open ACE.sln with Visual Studio and build the solution. 
-4. Download and install [Microsoft .NET Core Runtime - 2.2](https://www.microsoft.com/net/download) if you don't already have it.
+3. Open PcapPlayer.sln with Visual Studio and build the solution. 
+4. Download and install [Microsoft .NET Core Runtime - 5.0](https://www.microsoft.com/net/download) if you don't already have it.
 
 ### Starting the Server
-1. Start the server by running the batch file located in the netcoreapp2.2 output directory: `start_server.bat`
-   * ex. ACE\Source\ACE.Server\bin\x64\Debug\netcoreapp2.2\start_server.bat
+1. Start the server by running the batch file located in the net5.0 output directory: `PcapPlayer.exe`
+   * ex. PcapPlayer\Source\ACE.Server\bin\x64\Debug\net5.0
 2. Load the PCAP into the console - `pcap-load <full-path-to-pcap-file>`. The Pcap Player works better if the PCAP has a login event, but will attempt to join in-progress using a base login event. The console will notify you if there was np login event found. In the event of multiple login events in the PCAP, use `pcap-login <login-#>` to specify the index of the login to use from 1 to TOTAL_LOGIN_EVENTS.
 3. Launch ACClient directly with this command: `acclient.exe -a testaccount -v testpassword -h 127.0.0.1:9000`
 

@@ -350,6 +350,9 @@ namespace ACE.Server.Managers
 
         private static void DoWork(Object source, ElapsedEventArgs e)
         {
+            // NOPE, not gonna do any of this, thanks
+            return;
+
             var startTime = DateTime.UtcNow;
 
             // first, check for variables updated on the server-side. Write those to the DB.

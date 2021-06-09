@@ -7,11 +7,56 @@ using ACE.Server.Network;
 using ACE.PcapReader;
 using ACE.Entity;
 using PcapPlayer.Entity;
+using System.Linq;
 
 namespace ACE.Server.Command.Handlers
 {
     public static class ConsoleCommands
     {
+
+        // acecommands
+        [CommandHandler("help", AccessLevel.Player, CommandHandlerFlag.None, 0, "Lists all commands.", "<access level or search>")]
+        public static void HandleHelp(Session session, params string[] parameters)
+        {
+            var commandList = new List<string>();
+
+            var msgHeader = "Note: You may substitute a forward slash (/) for the at symbol (@).\n"
+                          + "For more information, type @acehelp < command >.\n";
+
+            if (session == null)
+                Console.WriteLine("For more information, type acehelp < command >.");
+
+            var accessLevel = session != null ? session.AccessLevel : AccessLevel.Admin;
+            var exact = false;
+            string search = null;
+
+            if (parameters.Length > 0)
+            {
+                var param = parameters[0];
+                if (Enum.TryParse(param, true, out AccessLevel pAccessLevel) && pAccessLevel <= accessLevel)
+                {
+                    accessLevel = pAccessLevel;
+                    exact = true;
+                }
+                else
+                    search = param;
+            }
+
+            var restrict = session != null ? CommandHandlerFlag.ConsoleInvoke : CommandHandlerFlag.RequiresWorld;
+
+            var commands = from cmd in CommandManager.GetCommands()
+                           where (exact ? cmd.Attribute.Access == accessLevel : cmd.Attribute.Access <= accessLevel) && cmd.Attribute.Flags != restrict
+                           && (search != null ? $"{cmd.Attribute.Access} {cmd.Attribute.Command} {cmd.Attribute.Description}".Contains(search, StringComparison.OrdinalIgnoreCase) : true)
+                           orderby cmd.Attribute.Command
+                           select cmd;
+
+            foreach (var command in commands)
+                commandList.Add(string.Format("@{0} - {1}", command.Attribute.Command, command.Attribute.Description));
+
+            var msg = string.Join("\n", commandList);
+            Console.WriteLine(msg);
+        }
+
         [CommandHandler("pcap-load", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0,
             "Load a PCAP for playback.", "<full-path-to-pcap-file>")]
         public static void HandleLoadPcap(Session session, params string[] parameters)
@@ -51,7 +96,10 @@ namespace ACE.Server.Command.Handlers
                 Console.WriteLine("Login set to first instance.");
 
                 if (PCapReader.TeleportIndexes.ContainsKey(1))
+                {
                     Console.WriteLine($"Instance has {PCapReader.TeleportIndexes[1].Count} teleports. Use @teleport in-game to advance to next, or @teleport <index> to select a specific one.");
+                    Console.WriteLine($"\nUse `list` to display a detailed breackdown of all login instances and teleports.\n");
+                }
                 else
                     Console.WriteLine($"Instance has no teleports.");
 
@@ -62,7 +110,11 @@ namespace ACE.Server.Command.Handlers
             {
                 Console.WriteLine("\nNo login events detected. We will attempt to join this pcap already in progress.\n");
                 if (PCapReader.TeleportIndexes.ContainsKey(0))
+                {
                     Console.WriteLine($"Instance has {PCapReader.TeleportIndexes[0].Count} teleports. Use @teleport in-game to advance to next, or @teleport <index> to select a specific one.");
+                    Console.WriteLine($"\nUse `list` to display a detailed breackdown of teleports.\n");
+
+                }
                 else
                     Console.WriteLine($"Instance has no teleports.");
             }
@@ -126,8 +178,7 @@ namespace ACE.Server.Command.Handlers
             session.RestartPcapPlayback();
         }
 
-        [CommandHandler("markerlist", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0,
-            "Lists the pcap line numbers of each login and teleport instance.", "")]
+        // Old function, no longer used. Left fo
         public static void HandleMarkerList(Session session, params string[] parameters)
         {
             if (parameters?.Length > 0)
@@ -161,18 +212,21 @@ namespace ACE.Server.Command.Handlers
             }
         }
 
-        [CommandHandler("list", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0,
-    "Lists the teleport locations and timestamps in the currently selected pcap.", "")]
+        [CommandHandler("markerlist", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0, "Alias of `list`.", "")]
+
+        [CommandHandler("list", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0, "Lists the teleport locations, timestamps, and line numbers in the currently selected pcap.", "")]
         public static void HandleTeleportList(Session session, params string[] parameters)
         {
             if (PCapReader.PcapMarkers.Count > 0)
             {
+                Console.WriteLine("Help: [Type] [instance], [pcap line number], [timespan from login HH:MM:ss] - [Approx Location]");
                 DungeonList dungeons = new DungeonList();
                 var teleportIndex = 0;
                 for(var i = 0; i < PCapReader.PcapMarkers.Count; i++)
                 {
                     var pcapMarker = PCapReader.PcapMarkers[i];
                     var line = pcapMarker.LineNumber;
+
                     CM_Movement.Position? pos;
                     if ((i + 1) < PCapReader.PcapMarkers.Count)
                     {
@@ -183,6 +237,7 @@ namespace ACE.Server.Command.Handlers
                         pos = PCapReader.GetDetailedLocationInfo(line, PCapReader.EndRecordIndex);
                     }
 
+                    // Set default as "unknown"
                     string loc = "Unable to determine location.";
                     if (pos != null)
                     {
@@ -202,7 +257,9 @@ namespace ACE.Server.Command.Handlers
                             // Are we in a dungeon?
                             if ((pos.objcell_id & 0xFFFF) >= 0x100)
                             {
-                                string dungeonName = dungeons.GetDungeonName(pos.objcell_id >> 16);
+                                var landblock = pos.objcell_id >> 16;
+                                loc = $"Unable to determine dungeon location (0x{landblock:X4}).";
+                                string dungeonName = dungeons.GetDungeonName(landblock);
                                 if (dungeonName != "")
                                     loc = dungeonName;
                             }
@@ -213,11 +270,13 @@ namespace ACE.Server.Command.Handlers
                     switch (pcapMarker.Type)
                     {
                         case MarkerType.Login:
-                            Console.WriteLine($"Login/Initial Position: {loc}");
+                            //Console.WriteLine($"Login/Initial Position: {loc}");
+                            Console.WriteLine($"Player Login {pcapMarker.LoginInstance}, line {pcapMarker.LineNumber} - {loc}");
+                            teleportIndex = 1;
                             break;
                         case MarkerType.Teleport:
-                            teleportIndex++;
-                            Console.WriteLine($"Teleport {teleportIndex}: {loc}");
+                            string time = PCapReader.GetPcapTime(pcapMarker);
+                            Console.WriteLine($"  Teleport {teleportIndex++}, line {pcapMarker.LineNumber}, {time} - {loc}");
                             break;
                     }
                 }
@@ -236,6 +295,42 @@ namespace ACE.Server.Command.Handlers
                 session.PausePcapPlayback();
             else
                 session.RestartPcapPlayback();
+        }
+
+
+        [CommandHandler("timewarp", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 1, "Jump forward or backward in time, relative to current location.", "")]
+        public static void HandleTimewarp(Session session, params string[] parameters)
+        {
+            if (parameters?.Length > 0)
+            {
+                // If we fail to get a valid int, we will continue with null (which means "next instance");
+                if (float.TryParse(parameters[0], out float timeOffset))
+                {
+                    if(timeOffset > 0)
+                        Console.WriteLine($"\nAttempting to jump forward by {timeOffset} minutes.");
+                    else
+                        Console.WriteLine($"\nAttempting to jump backward by {timeOffset} minutes.");
+
+                    Console.WriteLine("\nNote that using this function can cause the client to miss out on the CreateObject message or certain items and may cause them to be invisible.");
+                }
+            }
+
+
+        }
+
+        [CommandHandler("warpto", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 1, "Jump to a specific time in the pcap, relative to the login.", "")]
+        public static void HandleWarpTo(Session session, params string[] parameters)
+        {
+            if (parameters?.Length > 0)
+            {
+                // If we fail to get a valid int, we will continue with null (which means "next instance");
+                if (float.TryParse(parameters[0], out float inputTime))
+                {
+                    Console.WriteLine("\nNote that using this function can cause the client to miss out on the CreateObject message or certain items and may cause them to be invisible.");
+                }
+            }
+
+
         }
     }
 }
