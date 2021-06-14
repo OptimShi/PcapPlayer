@@ -119,7 +119,8 @@ namespace ACE.Server.Command.Handlers
                     Console.WriteLine($"Instance has no teleports.");
             }
 
-            Console.WriteLine("");
+            var port = Common.ConfigManager.Config.Server.Network.Port;
+            Console.WriteLine($"\nTo connect, enter the following command at the Command Prompt in your Asheron's Call folder, or use a launcher to connect using any username and password combination.\n\n    acclient.exe -h 127.0.0.1:{port} -a USER -v PASS\n");
         }
 
         [CommandHandler("pcap-login", AccessLevel.Player, CommandHandlerFlag.ConsoleInvoke, 0,
@@ -318,19 +319,86 @@ namespace ACE.Server.Command.Handlers
 
         }
 
-        [CommandHandler("warpto", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 1, "Jump to a specific time in the pcap, relative to the login.", "")]
-        public static void HandleWarpTo(Session session, params string[] parameters)
+        [CommandHandler("goto", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 1, "Sets the pcap to a specific time.", "goto <time>, e.g. 'goto 90', in seconds, or 'goto 1:30'")]
+        public static void HandleGoTo(Session session, params string[] parameters)
         {
-            if (parameters?.Length > 0)
+            if (parameters?.Length != 1)
             {
-                // If we fail to get a valid int, we will continue with null (which means "next instance");
-                if (float.TryParse(parameters[0], out float inputTime))
+                Console.WriteLine("Usage: goto <time>");
+                Console.WriteLine("  Examples:");
+                Console.WriteLine("     goto 90 - will jump to the 90 second mark");
+                Console.WriteLine("     goto 1:30 - will jump to the 90 second mark");
+                Console.WriteLine("     goto 5400 - will jump to the 90 minute mark");
+                Console.WriteLine("     goto 1:30:00 - will jump to the 90 minute mark");
+                return;
+            }
+
+            int time_goto = 0;
+            // Check if parameter has a colon for a timestamp
+            if (parameters[0].Contains(":"))
+            {
+                time_goto = ConvertMyTimestamp(parameters[0]);
+                if (time_goto <= 0)
                 {
-                    Console.WriteLine("\nNote that using this function can cause the client to miss out on the CreateObject message or certain items and may cause them to be invisible.");
+                    Console.WriteLine("Please specify a positive time value.");
+                    return;
+                }
+            }
+            else
+            {
+                if (int.TryParse(parameters[0], out int timeTemp) && timeTemp > 0)
+                {
+                    time_goto = timeTemp;
+                }
+                else
+                {
+                    Console.WriteLine("Please specify a valid, positive time value.");
+                    return;
                 }
             }
 
 
+        }
+
+        /// <summary>
+        /// Converts a user inputted timestamp in hh:mm:ss or mm:ss to just seconds.
+        /// There's probably a nicer built-in function for this, but this also works.
+        /// </summary>
+        /// <param name="timestmap"></param>
+        /// <returns></returns>
+        public static int ConvertMyTimestamp(string timestmap)
+        {
+            int myTime = 0;
+            string[] timeunits = timestmap.Split(':');
+            if (timeunits.Length > 3)
+            {
+                Console.WriteLine("Please use 'hh:mm:ss' format.");
+                return 0;
+            }
+
+            for (var i = 0; i < timeunits.Length; i++)
+            {
+                // gets our time unit multipler, 60 * 60 for hours, just *60 for minutes
+                int exp = timeunits.Length - 1 - i;
+                int multi = 1;
+                switch (exp)
+                {
+                    case 2: multi = 60 * 60; break;
+                    case 1: multi = 60; break;
+                    case 0: multi = 1; break;
+                }
+                if (int.TryParse(timeunits[i], out int timeTemp))
+                {
+                    myTime += multi * timeTemp;
+                }
+                else
+                {
+                    Console.WriteLine("Please use 'hh:mm:ss' format.");
+                    return 0;
+                }
+            }
+
+            return myTime;
         }
     }
 }
