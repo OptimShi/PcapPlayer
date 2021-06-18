@@ -11,6 +11,7 @@ namespace ACE.Database
     {
         public bool BoolExists(string key)
         {
+            return false;
             using (var context = new ShardDbContext())
                 return context.ConfigPropertiesBoolean.Any(r => r.Key == key);
         }

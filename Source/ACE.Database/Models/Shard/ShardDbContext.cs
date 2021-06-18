@@ -56,6 +56,7 @@ namespace ACE.Database.Models.Shard
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            return;
             if (!optionsBuilder.IsConfigured)
             {
                 var config = Common.ConfigManager.Config.MySql.Shard;
