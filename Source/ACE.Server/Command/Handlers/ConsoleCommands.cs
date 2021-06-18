@@ -302,6 +302,8 @@ namespace ACE.Server.Command.Handlers
         [CommandHandler("timewarp", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 1, "Jump forward or backward in time, relative to current location.", "")]
         public static void HandleTimewarp(Session session, params string[] parameters)
         {
+            Console.WriteLine("This feature is not yet implemented.");
+            return;
             if (parameters?.Length > 0)
             {
                 // If we fail to get a valid int, we will continue with null (which means "next instance");
@@ -319,9 +321,11 @@ namespace ACE.Server.Command.Handlers
 
         }
 
-        [CommandHandler("goto", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 1, "Sets the pcap to a specific time.", "goto <time>, e.g. 'goto 90', in seconds, or 'goto 1:30'")]
+        [CommandHandler("goto", AccessLevel.Player, CommandHandlerFlag.RequiresWorld, 0, "Sets the pcap to a specific time.", "goto <time>, e.g. 'goto 90', in seconds, or 'goto 1:30'")]
         public static void HandleGoTo(Session session, params string[] parameters)
         {
+            Console.WriteLine("This feature is not yet implemented.");
+            return;
             if (parameters?.Length != 1)
             {
                 Console.WriteLine("Usage: goto <time>");
@@ -330,6 +334,7 @@ namespace ACE.Server.Command.Handlers
                 Console.WriteLine("     goto 1:30 - will jump to the 90 second mark");
                 Console.WriteLine("     goto 5400 - will jump to the 90 minute mark");
                 Console.WriteLine("     goto 1:30:00 - will jump to the 90 minute mark");
+                Console.WriteLine("");
                 return;
             }
 
@@ -349,6 +354,9 @@ namespace ACE.Server.Command.Handlers
                 if (int.TryParse(parameters[0], out int timeTemp) && timeTemp > 0)
                 {
                     time_goto = timeTemp;
+
+                    session.PausePcapPlayback();
+                    //session.Network.EnqueueSend(new Network.GameMessages.Messages.GameMessagePlayerTeleport(new WorldObjects.Player()));
                 }
                 else
                 {

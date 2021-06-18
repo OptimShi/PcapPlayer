@@ -36,6 +36,12 @@ namespace ACE.Server.Network
             PcapPaused = false;
         }
 
+        public void JumpToTime()
+        {
+
+        }
+
+
         public void PausePcapPlayback()
         {
             if (pcapTimer != null && pcapTimer.Enabled)
